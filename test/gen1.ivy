@@ -1,0 +1,16 @@
+#lang ivy1.7
+
+type t
+interpret t -> int
+
+action act(x:t)
+
+before act {
+    require x >= 2
+}
+
+randomize act {
+    x := 3;
+}
+
+export act

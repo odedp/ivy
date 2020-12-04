@@ -86,6 +86,7 @@ class Module(object):
         self.finite_sorts = set() # set of sort names
         self.isolate_proofs = {}
         self.isolate_proof = None
+        self.randomize_export = {} # map from string to action
         
         self.sig = il.sig.copy() # capture the current signature
 

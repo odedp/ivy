@@ -668,7 +668,7 @@ def emit_eval(header,symbol,obj=None,classname=None,lhs=None):
 def var_to_z3_val(v):
     return int_to_z3(v.sort,varname(v))
 
-def emit_set_field(header,symbol,lhs,rhs,nvars=0):
+def emit_set_field(header,symbol,lhs,rhs,nvars=0,emit_alits=False):
     global indent_level
     name = symbol.name
     sname = slv.solver_name(symbol)
@@ -685,11 +685,14 @@ def emit_set_field(header,symbol,lhs,rhs,nvars=0):
             emit_set_field(header,destr,lhs1,rhs1,nvars+len(vs))
     else:
 #        code_line(header,'slvr.add('+lhs1+'=='+int_to_z3(sort.rng,rhs1)+')')
-        code_line(header,'slvr.add(__to_solver(*this,'+lhs1+','+rhs1+'))')
+        if emit_alits:
+            code_line(header,'add_alit(__to_solver(*this,'+lhs1+','+rhs1+'))')
+        else:
+            code_line(header,'slvr.add(__to_solver(*this,'+lhs1+','+rhs1+'))')
     close_loop(header,vs)
 
 
-def emit_set(header,symbol): 
+def emit_set(header,symbol,emit_alits=False): 
     global indent_level
     name = symbol.name
     sname = slv.solver_name(symbol)
@@ -703,7 +706,7 @@ def emit_set(header,symbol):
             vs = variables(domain)
             open_loop(header,vs)
             lhs = 'apply("'+sname+'"'+''.join(','+s for s in map(var_to_z3_val,vs)) + ')'
-            rhs = 'obj.' + varname(symbol) + ''.join('[{}]'.format(varname(v)) for v in vs)
+            rhs = ('' if emit_alits else 'obj.') + varname(symbol) + ''.join('[{}]'.format(varname(v)) for v in vs)
             emit_set_field(header,destr,lhs,rhs,len(vs))
             close_loop(header,vs)
         return
@@ -714,7 +717,10 @@ def emit_set(header,symbol):
         code_line(header,'std::vector<z3::expr> __quants;');
         for v in vs:
             code_line(header,'__quants.push_back(ctx.constant("{}",sort("{}")));'.format(varname(v),v.sort.name));
-        code_line(header,'slvr.add(forall({},__to_solver(*this,apply("{}",{}),obj.{})))'.format("__quants",sname,cvars,cname))
+        if emit_alits:
+            code_line(header,'add_alit(forall({},__to_solver(*this,apply("{}",{}),{})))'.format("__quants",sname,cvars,cname))
+        else:
+            code_line(header,'slvr.add(forall({},__to_solver(*this,apply("{}",{}),obj.{})))'.format("__quants",sname,cvars,cname))
         close_scope(header)
         return
     for idx,dsort in enumerate(domain):
@@ -723,10 +729,16 @@ def emit_set(header,symbol):
         header.append("for (int X{} = 0; X{} < {}; X{}++)\n".format(idx,idx,dcard,idx))
         indent_level += 1
     indent(header)
-    header.append('slvr.add(__to_solver(*this,apply("{}"'.format(sname)
-                  + ''.join(','+int_to_z3(domain[idx],'X{}'.format(idx)) for idx in range(len(domain)))
-                  + '),obj.{}'.format(cname)+ ''.join("[X{}]".format(idx) for idx in range(len(domain)))
-                  + '));\n')
+    if emit_alits:
+        header.append('add_alit(__to_solver(*this,apply("{}"'.format(sname)
+                      + ''.join(','+int_to_z3(domain[idx],'X{}'.format(idx)) for idx in range(len(domain)))
+                      + '),{}'.format(cname)+ ''.join("[X{}]".format(idx) for idx in range(len(domain)))
+                      + '));\n')
+    else:
+        header.append('slvr.add(__to_solver(*this,apply("{}"'.format(sname)
+                      + ''.join(','+int_to_z3(domain[idx],'X{}'.format(idx)) for idx in range(len(domain)))
+                      + '),obj.{}'.format(cname)+ ''.join("[X{}]".format(idx) for idx in range(len(domain)))
+                      + '));\n')
     # header.append('set("{}"'.format(sname)
     #               + ''.join(",X{}".format(idx) for idx in range(len(domain)))
     #               + ",obj.{}".format(cname)+ ''.join("[X{}]".format(idx) for idx in range(len(domain)))
@@ -1128,11 +1140,17 @@ def emit_action_gen(header,impl,name,action,classname):
         if sym in pre_used and sym not in old_pre_clauses.defidx: # skip symbols not used in constraint
             if slv.solver_name(il.normalize_symbol(sym)) != None: # skip interpreted symbols
                 if sym_is_member(sym):
-                    emit_set(impl,sym)
+                    emit_set(impl,sym,emit_alits=True)
     code_line(impl,'alits.clear()')
-    for sym in syms:
-        if not sym.name.startswith('__ts') and sym not in old_pre_clauses.defidx  and sym.name != '*>':
-            emit_randomize(impl,sym,classname=classname)
+    if name in im.module.randomize_export:
+        randomizer = im.module.randomize_export[name]
+        randomizer.emit(impl)
+        for sym in syms:
+            emit_set(impl,sym,emit_alits=True)
+    else:
+        for sym in syms:
+            if not sym.name.startswith('__ts') and sym not in old_pre_clauses.defidx  and sym.name != '*>':
+                emit_randomize(impl,sym,classname=classname)
 #    impl.append('    std::cout << "generating {}" << std::endl;\n'.format(caname))
     impl.append("""
     // std::cout << slvr << std::endl;

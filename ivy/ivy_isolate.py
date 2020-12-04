@@ -998,6 +998,13 @@ def isolate_component(mod,isolate_name,extra_with=[],extra_strip=None,after_init
                     action1 = ext_mod_mixin(all_mixins)(mixin,action1)
                     act = ia.apply_mixin(mixin,action1,act)
             mod.before_export['ext:' + actname] = act
+            for mixin in mod.mixins[actname]:
+                mixin_name = mixin.args[0].relname
+                action1 = lookup_action(mixin,mod,mixin_name)
+                if use_mixin(mixin_name) and isinstance(mixin,ivy_ast.MixinRandomizeDef):
+                    action1 = action1.assert_to_assume([ia.AssertAction,ia.RequiresAction])
+                    action1 = ext_mod_mixin(all_mixins)(mixin,action1)
+                    mod.randomize_export['ext:' + actname] = action1
 
     for e in mod.exports:
         if not e.scope() and startswith_eq_some(e.exported(),present,mod): # global scope
@@ -1363,16 +1370,16 @@ def get_mixin_order(iso,mod):
         key = lambda m: keymap[m.mixer()]
         before = sorted([m for m in mixins if isinstance(m,ivy_ast.MixinBeforeDef)],key=key)
         after = sorted([m for m in mixins if isinstance(m,ivy_ast.MixinAfterDef)],key=key)
+        randomize = sorted([m for m in mixins if isinstance(m,ivy_ast.MixinRandomizeDef)],key=key)
 #        order = SortOrder(arcs)
 #        before = sorted([m for m in mixins if isinstance(m,ivy_ast.MixinBeforeDef)],order)
 #        after = sorted([m for m in mixins if isinstance(m,ivy_ast.MixinAfterDef)],order)
         before.reverse() # add the before mixins in reverse order
-        mixins = implements + before + after
+        mixins = implements + before + after + randomize
 #        print 'mixin order for action {}:'
 #        for m in mixins:
 #            print m.args[0]
         mod.mixins[action] = mixins
-        
 
 ext_action = iu.Parameter("ext",None)
 

@@ -1027,6 +1027,11 @@ class MixinAfterDef(MixinDef):
         return self.mixer() + " after " + self.mixee()
     pass
 
+class MixinRandomizeDef(MixinDef):
+    def __str__(self):
+        return self.mixer() + " randomize " + self.mixee()
+    pass
+
 class IsolateDecl(Decl):    
     def name(self):
         return 'isolate'

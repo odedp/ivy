@@ -1572,7 +1572,7 @@ else:
 
 
 def handle_mixin(kind,mixer,mixee,ivy):
-    cls = (MixinBeforeDef if kind == 'before' else MixinAfterDef if kind == 'after' else MixinImplementDef)
+    cls = (MixinBeforeDef if kind == 'before' else MixinAfterDef if kind == 'after' else MixinRandomizeDef if kind == 'randomize' else MixinImplementDef)
     m = cls(mixer,mixee)
     m.lineno = mixer.lineno
     d = MixinDecl(m)
@@ -1744,6 +1744,14 @@ if not (iu.get_numeric_version() <= [1,1]):
         d.lineno = get_lineno(p,2)
         p[0] = p[1]
         p[0].declare(d)
+
+if not (iu.get_numeric_version() <= [1,6]):
+    def p_top_randomize_callatom_lcb_action_rcb(p):
+        'top : top RANDOMIZE atype optargs optreturns sequence'
+        p[0] = p[1]
+        atom = Atom(p[3])
+        atom.lineno = get_lineno(p,2)
+        handle_before_after("randomize",atom,p[6],p[0],p[4],p[5])
 
 if not (iu.get_numeric_version() <= [1,6]):
 
