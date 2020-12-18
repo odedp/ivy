@@ -108,18 +108,25 @@ special_names = {
 
 puncs = re.compile('[\.\[\]]')
 
+obj_name = None
+
 def varname(name):
-    global special_names
+    global special_names, obj_name
     if not isinstance(name,str):
         name = name.name
     if name in special_names:
         return special_names[name]
     if name.startswith('"'):
         return name
+
+    name1 = name.replace('loc:','loc__').replace('ext:','ext__').replace('___branch:','__branch__').replace('__prm:','prm__').replace('prm:','prm__').replace('__fml:','').replace('fml:','').replace('ret:','')
+    name1 = re.sub(puncs,'__',name1).replace('@@','.').replace(':','__COLON__')
+
+    if obj_name is not None:
+        if not(name.startswith('loc:') or name.startswith('fml:')):
+            name1 = obj_name + '.' + name1
     
-    name = name.replace('loc:','loc__').replace('ext:','ext__').replace('___branch:','__branch__').replace('__prm:','prm__').replace('prm:','prm__').replace('__fml:','').replace('fml:','').replace('ret:','')
-    name = re.sub(puncs,'__',name).replace('@@','.')
-    return name.replace(':','__COLON__')
+    return name1
 #    return name.split(':')[-1]
 
 def other_varname(name):
@@ -1144,7 +1151,10 @@ def emit_action_gen(header,impl,name,action,classname):
     code_line(impl,'alits.clear()')
     if name in im.module.randomize_export:
         randomizer = im.module.randomize_export[name]
+        global obj_name
+        obj_name = 'obj'
         randomizer.emit(impl)
+        obj_name = None
         for sym in syms:
             emit_set(impl,sym,emit_alits=True)
     else:
@@ -3950,7 +3960,7 @@ def emit_call(self,header):
         return
     if target.get() in ["gen","test"]:
         indent(header)
-        header.append('___ivy_stack.push_back(' + str(self.unique_id) + ');\n')
+        header.append(varname('___ivy_stack') + '.push_back(' + str(self.unique_id) + ');\n')
     code = []
     indent(code)
     retvals = []
@@ -4000,7 +4010,7 @@ def emit_call(self,header):
     header.extend(code)
     if target.get() in ["gen","test"]:
         indent(header)
-        header.append('___ivy_stack.pop_back();\n')
+        header.append(varname('___ivy_stack') + '.pop_back();\n')
 
 ia.CallAction.emit = emit_call
 
