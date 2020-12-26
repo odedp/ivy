@@ -123,7 +123,7 @@ def varname(name):
     name1 = re.sub(puncs,'__',name1).replace('@@','.').replace(':','__COLON__')
 
     if obj_name is not None:
-        if not(name.startswith('loc:') or name.startswith('fml:')):
+        if not(name.startswith('loc:') or name.startswith('fml:') or name[0].isdigit()):
             name1 = obj_name + '.' + name1
     
     return name1
@@ -151,7 +151,7 @@ def mk_nondet(code,v,rng,name,unique_id):
     global nondet_cnt
     indent(code)
     ct = 'int' if isinstance(v,str) else ctype(v.sort)
-    code.append(varname(v) + ' = ('+ct+')___ivy_choose(' + str(0) + ',"' + name + '",' + str(unique_id) + ');\n')
+    code.append(varname(v) + ' = ('+ct+')'+varname('___ivy_choose')+'(' + str(0) + ',"' + name + '",' + str(unique_id) + ');\n')
 
 def is_native_sym(sym):
     assert hasattr(sym.sort,'rng'),sym
@@ -165,7 +165,7 @@ def mk_nondet_sym(code,sym,name,unique_id):
     if is_large_type(sym.sort):
         code_line(code,varname(sym) + ' = ' + make_thunk(code,variables(sym.sort.dom),HavocSymbol(sym.sort.rng,name,unique_id)))
         return
-    fun = lambda v: (('('+ctype(v.sort)+')___ivy_choose(' + '0' + ',"' + name + '",' + str(unique_id) + ')')
+    fun = lambda v: (('('+ctype(v.sort)+')'+varname('___ivy_choose')+'(' + '0' + ',"' + name + '",' + str(unique_id) + ')')
                      if not (is_native_sym(v) or ctype(v.sort) == '__strlit' or v.sort in sort_to_cpptype) else None)
     dom = sym.sort.dom
     if dom:
@@ -3695,7 +3695,7 @@ def emit_some(self,header,code):
     else:
         vs = self.params()
         params = [new_temp(header)]
-        code_line(header,params[0] + ' = ___ivy_choose(' + csortcard(vs[0].sort) + ',"' + str(vs[0]) + '",0)')
+        code_line(header,params[0] + ' = '+varname('___ivy_choose')+'(' + csortcard(vs[0].sort) + ',"' + str(vs[0]) + '",0)')
         fmla = self.fmla()
     for v in vs:
         check_iterable_sort(v.sort)
