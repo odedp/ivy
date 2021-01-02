@@ -42,6 +42,8 @@ def add_mixins(mod,actname,action2,assert_to_assume=lambda m:[],use_mixin=lambda
     if create_imports.get():
         res = res.drop_invariants()
     for mixin in mod.mixins[actname]:
+        if isinstance(mixin,ivy_ast.MixinRandomizeDef):
+            continue
         mixin_name = mixin.mixer()
         action1 = lookup_action(mixin,mod,mixin_name)
         if use_mixin(mixin_name):
@@ -983,6 +985,8 @@ def isolate_component(mod,isolate_name,extra_with=[],extra_strip=None,after_init
 #    save_implementation_map = implementation_map
 #    implementation_map = {}
 
+    randomizers = []
+
     def make_before_export(actname):
             ver = vstartswith_eq_some(actname,verified,mod)
             action = mod.actions[actname]
@@ -1005,12 +1009,14 @@ def isolate_component(mod,isolate_name,extra_with=[],extra_strip=None,after_init
                     action1 = action1.assert_to_assume([ia.AssertAction,ia.RequiresAction])
                     action1 = ext_mod_mixin(all_mixins)(mixin,action1)
                     mod.randomize_export['ext:' + actname] = action1
+                    randomizers.append(action1)
 
     for e in mod.exports:
         if not e.scope() and startswith_eq_some(e.exported(),present,mod): # global scope
             exported.add('ext:' + e.exported())
             make_before_export(e.exported())
             
+
     explicit_exports = set(exported)
 
     with_effects = set()
@@ -1126,7 +1132,7 @@ def isolate_component(mod,isolate_name,extra_with=[],extra_strip=None,after_init
 
     # Get rid of the inaccessible actions
 
-    cone = get_mod_cone(mod,actions=new_actions,roots=exported,after_inits=after_inits)        
+    cone = get_mod_cone(mod,actions=new_actions,roots=exported,after_inits=after_inits,randomizers=randomizers)        
     new_actions = dict((x,y) for x,y in new_actions.iteritems() if x in cone)
     mod.isolate_info.implementations = [(impl,actname,action) for impl,actname,action in mod.isolate_info.implementations
                                        if actname in new_actions or 'ext:'+actname in new_actions]
@@ -1392,23 +1398,26 @@ def get_cone(actions,action_name,cone):
     if action_name not in cone:
 #        print '({} '.format(action_name)
         cone.add(action_name)
-        for a in actions[action_name].iter_subactions():
-            if isinstance(a,ia.CallAction):
-                get_cone(actions,a.callee(),cone)
-            elif isinstance(a,ia.NativeAction):
-                for arg in a.args[1:]:
-                    if isinstance(arg,ivy_ast.Atom):
-                        n = arg.relname
-                        if n in actions:
-                            get_cone(actions,n,cone)
+        get_cone_action(actions,actions[action_name],cone)
+
+def get_cone_action(actions,action,cone):        
+    for a in action.iter_subactions():
+        if isinstance(a,ia.CallAction):
+            get_cone(actions,a.callee(),cone)
+        elif isinstance(a,ia.NativeAction):
+            for arg in a.args[1:]:
+                if isinstance(arg,ivy_ast.Atom):
+                    n = arg.relname
+                    if n in actions:
+                        get_cone(actions,n,cone)
 #        print ')'
             
 # Get the names of the actions that accessible from a given set of
 # roots (normally the exported actions). An action is accessible if
 # if is a root, or is referenced from native code, or is called in
-# an intializer. 
+# an intializer or a randomizer. 
 
-def get_mod_cone(mod,actions=None,roots=None,after_inits=[]):
+def get_mod_cone(mod,actions=None,roots=None,after_inits=[],randomizers=[]):
     actions = actions if actions is not None else mod.actions
     roots = roots if roots is not None else mod.public_actions
     cone = set()
@@ -1420,6 +1429,8 @@ def get_mod_cone(mod,actions=None,roots=None,after_inits=[]):
                 get_cone(actions,a.rep,cone)
     for ai in after_inits:
         get_cone(actions,ai,cone)
+    for ra in randomizers:
+        get_cone_action(actions,ra,cone)
     return cone
 
 def loop_action(action,mod):
