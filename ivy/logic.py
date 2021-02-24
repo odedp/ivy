@@ -6,8 +6,8 @@
 
 from operator import itemgetter
 
-from general import IvyError
-from utils.recstruct_object import recstruct
+from .general import IvyError
+from .utils.recstruct_object import recstruct
 
 # Exceptions
 
@@ -155,7 +155,7 @@ class Apply(recstruct('Apply', [], ['func', '*terms'])):
                          terms[i].sort != func.sort.domain[i] and
                          not any(type(t) is TopSort for t in (terms[i].sort, func.sort.domain[i]))]
             for i in bad_sorts:
-                print 'terms = {}'.format(terms)
+                print('terms = {}'.format(terms))
                 report_bad_sort(func,i,func.sort.domain[i],terms[i].sort)
         return (func, ) + terms
 
@@ -437,13 +437,13 @@ if __name__ == '__main__':
     assert contains_topsort(h)
 
     b = NamedBinder('mybinder', [X,Y,Z], None, Implies(And(f(X,Y), f(X,Z)), Eq(Y,Z)))
-    print b
-    print b.sort
-    print
+    print(b)
+    print(b.sort)
+    print()
 
     b = NamedBinder('mybinder', [X,Y,Z], None, Z)
-    print b
-    print b.sort
+    print(b)
+    print(b.sort)
 
 
     # TODO: add more tests, add tests for errors

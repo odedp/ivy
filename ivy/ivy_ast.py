@@ -5,9 +5,9 @@
 Ivy abstract syntax trees.
 """
 
-from ivy_utils import flatten, gen_to_set, UniqueRenamer, compose_names, split_name, IvyError, base_name
-import ivy_utils as iu
-import ivy_logic
+from .ivy_utils import flatten, gen_to_set, UniqueRenamer, compose_names, split_name, IvyError, base_name
+from . import ivy_utils as iu
+from . import ivy_logic
 import re
 
 class AST(object):
@@ -1263,7 +1263,7 @@ class ActionDef(Definition):
         return self.args[1].iter_internal_defines()
     def clone(self,args):
         if not hasattr(self.args[1],'lineno'):
-            print 'no lineno!!!!!: {}'.format(self)
+            print('no lineno!!!!!: {}'.format(self))
         res = ActionDef(args[0],args[1])
         res.formal_params = self.formal_params
         res.formal_returns = self.formal_returns
@@ -1417,7 +1417,7 @@ def subst_subscripts_comp(s,subst):
     try:
         res =  pref + ''.join(('[' + str_subst_str(x[1:-1],subst) + ']' if x.startswith('[') else x) for x in g[1:])
     except:
-        print "s: {} subst : {}".format(s,subst)
+        print("s: {} subst : {}".format(s,subst))
 #    print "res: {}".format(res)
     return res
 
@@ -1552,7 +1552,7 @@ def ast_rewrite(x,rewrite):
         return x
     if hasattr(x,'args'):
         return x.clone(ast_rewrite(x.args,rewrite)) # yikes!
-    print "wtf: {} {}".format(x,type(x))
+    print("wtf: {} {}".format(x,type(x)))
     assert False
 
 def subst_prefix_atoms_ast(ast,subst,pref,to_pref,static=None):

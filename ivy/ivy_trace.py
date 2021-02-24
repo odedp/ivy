@@ -5,16 +5,16 @@
 #  Construct counterexample traces suitable for viewing with the GUI
 #
 
-import ivy_solver as islv
-import ivy_art as art
-import ivy_interp as itp
-import ivy_actions as act
-import ivy_logic as lg
-import ivy_transrel as itr
-import ivy_logic_utils as lut
-import ivy_utils as iu
-import ivy_module as im
-import ivy_solver as slv
+from . import ivy_solver as islv
+from . import ivy_art as art
+from . import ivy_interp as itp
+from . import ivy_actions as act
+from . import ivy_logic as lg
+from . import ivy_transrel as itr
+from . import ivy_logic_utils as lut
+from . import ivy_utils as iu
+from . import ivy_module as im
+from . import ivy_solver as slv
 from collections import defaultdict
 
 ################################################################################
@@ -79,7 +79,7 @@ class TraceBase(art.AnalysisGraph):
                 lines.append('\n')
             foo = False
             for c in state.clauses.fmlas:
-                s1,s2 = map(str,c.args)
+                s1,s2 = list(map(str,c.args))
                 if not(s1 in hash and hash[s1] == s2):
                     hash[s1] = s2
                     if not foo:
@@ -172,7 +172,7 @@ class Trace(TraceBase):
         for sym in self.vocab:
             if sym not in env and not itr.is_new(sym) and not self.is_skolem(sym):
                 sym_pairs.append((sym,sym))
-        for sym,renamed_sym in env.iteritems():
+        for sym,renamed_sym in env.items():
             if not itr.is_new(sym) and not self.is_skolem(sym):
                 sym_pairs.append((sym,renamed_sym))
         self.new_state_pairs(sym_pairs,env)
@@ -277,7 +277,7 @@ def make_vc(action,precond=[],postcond=[],check_asserts=True):
     clauses = lut.and_clauses(clauses,axioms)
     fc = lut.Clauses([lf.formula for lf in postcond])
     fc.annot = act.EmptyAnnotation()
-    used_names = frozenset(x.name for x in lg.sig.symbols.values())
+    used_names = frozenset(x.name for x in list(lg.sig.symbols.values()))
     def witness(v):
         c = lg.Symbol('@' + v.name, v.sort)
         assert c.name not in used_names

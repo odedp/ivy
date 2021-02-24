@@ -3,23 +3,23 @@
 # Copyright (c) Microsoft Corporation. All Rights Reserved.
 #
 
-import ivy_init
-import ivy_logic as il
-import ivy_module as im
-import ivy_utils as iu
-import ivy_actions as ia
-import logic as lg
-import logic_util as lu
-import ivy_solver as slv
-import ivy_transrel as tr
-import ivy_logic_utils as ilu
-import ivy_compiler as ic
-import ivy_isolate as iso
-import ivy_ast
+from . import ivy_init
+from . import ivy_logic as il
+from . import ivy_module as im
+from . import ivy_utils as iu
+from . import ivy_actions as ia
+from . import logic as lg
+from . import logic_util as lu
+from . import ivy_solver as slv
+from . import ivy_transrel as tr
+from . import ivy_logic_utils as ilu
+from . import ivy_compiler as ic
+from . import ivy_isolate as iso
+from . import ivy_ast
 import itertools
-import ivy_cpp
-import ivy_cpp_types
-import ivy_fragment as ifc
+from . import ivy_cpp
+from . import ivy_cpp_types
+from . import ivy_fragment as ifc
 import sys
 import os
 
@@ -27,6 +27,7 @@ import os
 from collections import defaultdict
 from operator import mul
 import re
+from functools import reduce
 
 
 def all_state_symbols():
@@ -391,13 +392,13 @@ large_thresh = 1024
 def is_large_destr(sort):
     if hasattr(sort,'dom') and any(not is_any_integer_type(s) for s in sort.dom[1:]):
         return True
-    cards = map(sort_card,sort.dom[1:] if hasattr(sort,'dom') else [])
+    cards = list(map(sort_card,sort.dom[1:] if hasattr(sort,'dom') else []))
     return not(all(cards) and reduce(mul,cards,1) <= large_thresh)
 
 def is_large_type(sort):
     if hasattr(sort,'dom') and any(not is_any_integer_type(s) for s in sort.dom):
         return True
-    cards = map(sort_card,sort.dom if hasattr(sort,'dom') else [])
+    cards = list(map(sort_card,sort.dom if hasattr(sort,'dom') else []))
     return not(all(cards) and reduce(mul,cards,1) <= large_thresh)
 
 def is_large_lhs(term):
@@ -409,7 +410,7 @@ def is_large_lhs(term):
     
 
 def ctype_function(sort,classname=None,skip_params=0):
-    cards = map(sort_card,sort.dom[skip_params:] if hasattr(sort,'dom') else [])
+    cards = list(map(sort_card,sort.dom[skip_params:] if hasattr(sort,'dom') else []))
     cty = ctypefull(sort.rng,classname)
     if all(cards) and reduce(mul,cards,1) <= large_thresh:
         if not(hasattr(sort,'dom') and any(not is_any_integer_type(s) for s in sort.dom[skip_params:])):
@@ -542,7 +543,7 @@ def emit_cpp_sorts(header):
             destrs = im.module.sort_destructors[name]
             for destr in destrs:
                 declare_symbol(header,destr,skip_params=1)
-            header.append("        size_t __hash() const { "+struct_hash_fun(map(memname,destrs),[d.sort for d in destrs]) + "}\n")
+            header.append("        size_t __hash() const { "+struct_hash_fun(list(map(memname,destrs)),[d.sort for d in destrs]) + "}\n")
             header.append("    };\n");
         elif isinstance(il.sig.sorts[name],il.EnumeratedSort):
             sort = il.sig.sorts[name]
@@ -567,7 +568,7 @@ def emit_cpp_sorts(header):
 
 
 def emit_sorts(header):
-    for name,sort in il.sig.sorts.iteritems():
+    for name,sort in il.sig.sorts.items():
         if name == "bool":
             continue
         if name in il.sig.interp:
@@ -677,7 +678,7 @@ def emit_set_field(header,symbol,lhs,rhs,nvars=0):
     domain = sort.dom[1:]
     vs = variables(domain,start=nvars)
     open_loop(header,vs)
-    lhs1 = 'apply("'+sname+'"'+''.join(','+s for s in ([lhs]+map(var_to_z3_val,vs))) + ')'
+    lhs1 = 'apply("'+sname+'"'+''.join(','+s for s in ([lhs]+list(map(var_to_z3_val,vs)))) + ')'
     rhs1 = rhs + ''.join('[{}]'.format(varname(v)) for v in vs) + '.' + memname(symbol)
     if sort.rng.name in im.module.sort_destructors:
         destrs = im.module.sort_destructors[sort.rng.name]
@@ -895,7 +896,7 @@ def extract_defined_parameters(pre_clauses,inputs):
     inpdefs = []
     while change:
         change = False
-        for input,fmla in list(defmap.iteritems()):
+        for input,fmla in list(defmap.items()):
             if (all(input not in ilu.used_symbols_ast(f) or f == fmla for f in pre_clauses.fmlas)
                 and all(input not in ilu.used_symbols_ast(d) for d in pre_clauses.defs)):
                 pre_clauses = ilu.Clauses([f for f in pre_clauses.fmlas if f != fmla],pre_clauses.defs)
@@ -981,7 +982,7 @@ def minimal_field_references(fmla,inputs):
         return set(y for y in refs if all(not(lt(x,y)) for x in refs))
             
     recur(fmla)
-    res = dict((inp,get_minima(refs)) for inp,refs in res.iteritems())
+    res = dict((inp,get_minima(refs)) for inp,refs in res.items())
     return res
                 
 def minimal_field_siblings(inputs,mrefs):
@@ -1007,15 +1008,15 @@ def extract_input_fields(pre_clauses,inputs):
         if len(f.args) == 1:
             return field_symbol_name(f.args[0]) + '__' + f.rep.name
         return f.rep.name
-    fsyms = dict((il.Symbol(field_symbol_name(y),y.sort),y) for l in mrefs.values() for y in l)
-    rfsyms  = dict((y,x) for x,y in fsyms.iteritems())
+    fsyms = dict((il.Symbol(field_symbol_name(y),y.sort),y) for l in list(mrefs.values()) for y in l)
+    rfsyms  = dict((y,x) for x,y in fsyms.items())
     def recur(f):
         if il.is_app(f):
             if f.rep in mrefs or f.rep.name in im.module.destructor_sorts and len(f.args) == 1:
                 if f in rfsyms:
                     return rfsyms[f]
-        return f.clone(map(recur,f.args))
-    pre_clauses = ilu.Clauses(map(recur,pre_clauses.fmlas),map(recur,pre_clauses.defs))
+        return f.clone(list(map(recur,f.args)))
+    pre_clauses = ilu.Clauses(list(map(recur,pre_clauses.fmlas)),list(map(recur,pre_clauses.defs)))
     inputs = list(fsyms.keys())
     return pre_clauses,inputs,fsyms
 
@@ -1028,12 +1029,12 @@ def expand_field_references(pre_clauses):
     def recur(f):
         if il.is_app(f) and f.rep in defmap:
             return recur(defmap[f.rep])
-        return f.clone(map(recur,f.args))
+        return f.clone(list(map(recur,f.args)))
     def recur_def(d):
         return d.clone([d.args[0],recur(d.args[1])])
-    dfs = map(recur,pre_clauses.defs)
+    dfs = list(map(recur,pre_clauses.defs))
     dfs = [df for df in dfs if df.args[0] != df.args[1]]
-    return ilu.Clauses(map(recur,pre_clauses.fmlas),dfs)
+    return ilu.Clauses(list(map(recur,pre_clauses.fmlas)),dfs)
 
 def emit_action_gen(header,impl,name,action,classname):
     global indent_level
@@ -1190,7 +1191,7 @@ def emit_derived(header,impl,df,classname,inline=False):
     retval = il.Symbol("ret:val",sort)
     vs = df.args[0].args
     ps = [ilu.var_to_skolem('fml:',v) for v in vs]
-    mp = dict(zip(vs,ps))
+    mp = dict(list(zip(vs,ps)))
     rhs = ilu.substitute_ast(df.args[1],mp)
     action = ia.AssignAction(retval,rhs)
     action.formal_params = ps
@@ -1371,7 +1372,7 @@ def emit_param_decls(header,name,params,extra=[],classname=None,ptypes=None):
     header.append(funname(name) + '(')
     for p in params:
         if il.is_function_sort(p.sort):
-            raise(iu.IvyError(None,'Cannot compile parameter {} with function sort'.format(p)))
+            raise iu
     header.append(', '.join(extra + [ctype(p.sort,classname=classname,ptype = ptypes[idx] if ptypes else None) + ' ' + varname(p.name) for idx,p in enumerate(params)]))
     header.append(')')
 
@@ -1386,8 +1387,8 @@ def emit_param_decls_with_inouts(header,name,params,classname,ptypes,returns,ret
 
 def emit_method_decl(header,name,action,body=False,classname=None,inline=False):
     if not hasattr(action,"formal_returns"):
-        print "bad name: {}".format(name)
-        print "bad action: {}".format(action)
+        print("bad name: {}".format(name))
+        print("bad action: {}".format(action))
     rs = action.formal_returns
     ptypes,rtypes = get_param_types(name,action)
     if not body:
@@ -1594,7 +1595,7 @@ def emit_tick(header,impl,classname):
                 continue
             rvs = list(lu.free_variables(r.args[0]))
             assert len(rvs) == len(vs)
-            subs = dict(zip(rvs,vs))
+            subs = dict(list(zip(rvs,vs)))
 
             ## TRICKY: If there are any free variables on rhs of
             ## rely not occuring on left, we must prevent their capture
@@ -1633,7 +1634,7 @@ def csortcard(s):
     return str(card) if card else "0"
 
 def check_member_names(classname):
-    names = map(varname,(list(il.sig.symbols) + list(il.sig.sorts) + list(im.module.actions)))
+    names = list(map(varname,(list(il.sig.symbols) + list(il.sig.sorts) + list(im.module.actions))))
     if classname in names:
         raise iu.IvyError(None,'Cannot create C++ class {} with member {}.\nUse command line option classname=... to change the class name.'
                           .format(classname,classname))
@@ -1711,7 +1712,7 @@ def module_to_cpp_class(classname,basename):
     is_derived = dict()
     for ldf in im.module.definitions + im.module.native_definitions:
         is_derived[ldf.formula.defines()] = ldf
-    for sortname, conss in im.module.sort_constructors.iteritems():
+    for sortname, conss in im.module.sort_constructors.items():
         for cons in conss:
             is_derived[cons] = True
     global cpptypes
@@ -1720,7 +1721,7 @@ def module_to_cpp_class(classname,basename):
     sort_to_cpptype = {}
     global field_names
     field_names = dict()
-    for destrs in im.module.sort_destructors.values():
+    for destrs in list(im.module.sort_destructors.values()):
         if destrs: # paranoia
             dest_base,_ = iu.parent_child_name(destrs[0].name)
             if not all(iu.parent_child_name(d.name)[0] == dest_base for d in destrs):
@@ -1731,7 +1732,7 @@ def module_to_cpp_class(classname,basename):
         for t in list(il.sig.interp):
             attr = iu.compose_names(t,'override')
             if attr in im.module.attributes:
-                print 'override: interpreting {} as {}'.format(t,im.module.attributes[attr].rep)
+                print('override: interpreting {} as {}'.format(t,im.module.attributes[attr].rep))
                 il.sig.interp[t] = im.module.attributes[attr].rep
 
     global number_format
@@ -2050,7 +2051,7 @@ void CLASSNAME::install_timer(timer *r) {
     native_exprs = []
     for n in im.module.natives:
         native_exprs.extend(n.args[2:])
-    for actn,actb in im.module.actions.iteritems():
+    for actn,actb in im.module.actions.items():
         for n in actb.iter_subactions():
             if isinstance(n,ia.NativeAction):
                 native_exprs.extend(n.args[1:])
@@ -2625,7 +2626,7 @@ class z3_thunk : public thunk<D,R> {
     for ldf in im.module.definitions + im.module.native_definitions:
         with ivy_ast.ASTContext(ldf):
             emit_derived(header,impl,ldf.formula,classname)
-    for sortname, conss in im.module.sort_constructors.iteritems():
+    for sortname, conss in im.module.sort_constructors.items():
         for cons in conss:
             emit_constructor(header,impl,cons,classname)
     for native in im.module.natives:
@@ -2728,7 +2729,7 @@ class z3_thunk : public thunk<D,R> {
         if target.get() == "gen":
             emit_boilerplate1(sf,impl,classname)
         emit_init_gen(sf,impl,classname)
-        for name,action in im.module.actions.iteritems():
+        for name,action in im.module.actions.items():
             if name in im.module.public_actions:
                 emit_action_gen(sf,impl,name,action,classname)
 
@@ -2747,7 +2748,7 @@ class z3_thunk : public thunk<D,R> {
         # Tricky: inlines for for supertypes have to come *after* the inlines
         # for the subtypes. So we re-sort the types accordingly.
         arcs = [(x,s) for s in im.module.sort_order for x in im.sort_dependencies(im.module,s,with_variants=True)]
-        variant_of = set((x.name,y) for y,l in im.module.variants.iteritems() for x in l)
+        variant_of = set((x.name,y) for y,l in im.module.variants.items() for x in l)
         arcs = [a for a in arcs if a in variant_of]
         inline_sort_order = iu.topological_sort(im.module.sort_order,arcs)
         global_classname = classname
@@ -3189,7 +3190,7 @@ def assign_symbol_value(header,lhs_text,m,v,same=False):
                     assign_symbol_value(header,lhs_text+[ctext],m,term,same)
                     close_loop(header,vs)
                 else:
-                    for args in itertools.product(*[range(sort_card(s)) for s in dom]):
+                    for args in itertools.product(*[list(range(sort_card(s))) for s in dom]):
                         term = sym(*([v] + [il.Symbol(str(a),s) for a,s in zip(args,dom)]))
                         ctext = memname(sym) + ''.join('['+str(a)+']' for a in args)
                         assign_symbol_value(header,lhs_text+[ctext],m,term,same)
@@ -3210,7 +3211,7 @@ def assign_symbol_from_model(header,sym,m):
     really_check_representable(sym)
     fun = lambda v: cstr(m.eval_to_constant(v))
     if hasattr(sort,'dom'):
-        for args in itertools.product(*[range(sort_card(s)) for s in sym.sort.dom]):
+        for args in itertools.product(*[list(range(sort_card(s))) for s in sym.sort.dom]):
             term = sym(*[il.Symbol(str(a),s) for a,s in zip(args,sym.sort.dom)])
             ctext = varname(sym.name) + ''.join('['+str(a)+']' for a in args)
             assign_symbol_value(header,[ctext],fun,term)
@@ -3251,7 +3252,7 @@ def emit_one_initial_state(header):
 #    clauses = ilu.and_clauses(im.module.init_cond,im.module.background_theory())
     m = slv.get_model_clauses(clauses)
     if m == None:
-        print clauses
+        print(clauses)
         if iu.version_le(iu.get_string_version(),"1.6"):
             raise iu.IvyError(None,'Initial condition and/or axioms are inconsistent')
         else:
@@ -3598,7 +3599,7 @@ def emit_quant(variables,body,header,code,exists=False):
         if iter_sort_name not in il.sig.sorts:
             iter_sort_name = iu.compose_names(iter,'t')
         if iter_sort_name not in il.sig.sorts:
-            print iter_sort_name
+            print(iter_sort_name)
             raise iu.IvyError(None,'sort {} has iterable attribute but no iterator'.format(v0.sort))
         iter_sort = il.sig.sorts[iter_sort_name]
         zero = []
@@ -3661,7 +3662,7 @@ def emit_some(self,header,code):
                 return
             
         vs = [il.Variable('X__'+str(idx),p.sort) for idx,p in enumerate(self.params())]
-        subst = dict(zip(self.params(),vs))
+        subst = dict(list(zip(self.params(),vs)))
         fmla = ilu.substitute_constants_ast(self.fmla(),subst)
         params = self.params()
     else:
@@ -3876,8 +3877,8 @@ def emit_assign(self,header):
 ia.AssignAction.emit = emit_assign
 
 def emit_havoc(self,header):
-    print self
-    print self.lineno
+    print(self)
+    print(self.lineno)
     assert False
 
 ia.HavocAction.emit = emit_havoc
@@ -5165,7 +5166,7 @@ def main_int(is_ivyc):
                 raise iu.IvyError(None,'Version 2 compiler supports only target=repl')
             cdir = os.path.join(os.path.dirname(__file__), 'ivy2/s3')
             cmd = 'IVY_INCLUDE_PATH={} {} {}'.format(os.path.join(cdir,'include'),os.path.join(cdir,'ivyc_s3'),sys.argv[1])
-            print cmd
+            print(cmd)
             sys.stdout.flush()
             status = os.system(cmd)
             exit(status)
@@ -5188,7 +5189,7 @@ def main_int(is_ivyc):
                 if target.get() == 'test':
                     isolates = ['this']
                 else:
-                    extracts = list((x,y) for x,y in im.module.isolates.iteritems()
+                    extracts = list((x,y) for x,y in im.module.isolates.items()
                                     if isinstance(y,ivy_ast.ExtractDef))
                     if len(extracts) == 0:
                         isol = ivy_ast.ExtractDef(ivy_ast.Atom('extract'),ivy_ast.Atom('this'))
@@ -5222,14 +5223,14 @@ def main_int(is_ivyc):
 
 
                     def do_cmd(cmd):
-                        print cmd
+                        print(cmd)
                         status = os.system(cmd)
                         if status:
                             exit(1)
     
                     if isolate:
                         if len(isolates) > 1:
-                            print "Compiling isolate {}...".format(isolate)
+                            print("Compiling isolate {}...".format(isolate))
 
                     if (not iu.version_le(iu.get_string_version(),"1.6") and
                         target.get() == 'repl' and isolate in im.module.isolates):
@@ -5280,10 +5281,10 @@ def main_int(is_ivyc):
                             exit(1)
                     else:
                         libs = []    
-                    cpp11 = any(x.endswith('.cppstd') and y.rep=='cpp11' for x,y in im.module.attributes.iteritems())
+                    cpp11 = any(x.endswith('.cppstd') and y.rep=='cpp11' for x,y in im.module.attributes.items())
                     gpp11_spec = ' -std=c++11 ' if cpp11 else '' 
                     libspec = ''
-                    for x,y in im.module.attributes.iteritems():
+                    for x,y in im.module.attributes.items():
                         p,c = iu.parent_child_name(x)
                         if c == 'libspec':
                             if platform.system() == 'Windows':
@@ -5303,8 +5304,8 @@ def main_int(is_ivyc):
                         incspec = '/I {}'.format(os.path.join(_dir,'include'))
                         libpspec = '/LIBPATH:{}'.format(os.path.join(_dir,'lib'))
                         if not os.path.exists('libz3.dll'):
-                            print 'Copying libz3.dll to current directory.'
-                            print 'If the binary {}.exe is moved to another directory, this file must also be moved.'.format(basename)
+                            print('Copying libz3.dll to current directory.')
+                            print('If the binary {}.exe is moved to another directory, this file must also be moved.'.format(basename))
                             do_cmd('copy {} libz3.dll'.format(os.path.join(_dir,'lib','libz3.dll')))
                         for lib in libs:
                             _incdir = lib[1] if len(lib) >= 2 else []
@@ -5346,7 +5347,7 @@ def main_int(is_ivyc):
                             cmd = cmd + ' -lz3'
                         cmd += libspec
                         cmd += ' -pthread'
-                    print cmd
+                    print(cmd)
                     sys.stdout.flush()
                     with iu.WorkingDir(builddir):
                         status = os.system(cmd)

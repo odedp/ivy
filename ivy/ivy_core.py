@@ -4,7 +4,7 @@
 # TODO get rid of import *
 
 from z3 import *
-import ivy_utils as iu
+from . import ivy_utils as iu
 
 def get_id(x):
     return Z3_get_ast_id(x.ctx_ref(), x.as_ast())

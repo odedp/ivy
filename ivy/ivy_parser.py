@@ -1,11 +1,11 @@
 
 # Copyright (c) Microsoft Corporation. All Rights Reserved.
 #
-from ivy_concept_space import NamedSpace, ProductSpace, SumSpace
-from ivy_ast import *
-from ivy_actions import AssumeAction, AssertAction, EnsuresAction, SetAction, AssignAction, VarAction, HavocAction, IfAction, AssignFieldAction, NullFieldAction, CopyFieldAction, InstantiateAction, CallAction, LocalAction, LetAction, Sequence, UpdatePattern, PatternBasedUpdate, SymbolList, UpdatePatternList, Schema, ChoiceAction, NativeAction, WhileAction, Ranking, RequiresAction, EnsuresAction, CrashAction, ThunkAction
-from ivy_lexer import *
-import ivy_utils as iu
+from .ivy_concept_space import NamedSpace, ProductSpace, SumSpace
+from .ivy_ast import *
+from .ivy_actions import AssumeAction, AssertAction, EnsuresAction, SetAction, AssignAction, VarAction, HavocAction, IfAction, AssignFieldAction, NullFieldAction, CopyFieldAction, InstantiateAction, CallAction, LocalAction, LetAction, Sequence, UpdatePattern, PatternBasedUpdate, SymbolList, UpdatePatternList, Schema, ChoiceAction, NativeAction, WhileAction, Ranking, RequiresAction, EnsuresAction, CrashAction, ThunkAction
+from .ivy_lexer import *
+from . import ivy_utils as iu
 import copy
 from collections import defaultdict
 
@@ -131,7 +131,7 @@ def inst_mod(ivy,module,pref,subst,vsubst):
             if vsubst:
                 map1 = distinct_variable_renaming(used_variables_ast(pref),used_variables_ast(decl))
                 vpref = substitute_ast(pref,map1)
-                vvsubst = dict((x,map1[y.rep]) for x,y in vsubst.iteritems())
+                vvsubst = dict((x,map1[y.rep]) for x,y in vsubst.items())
                 idecl = AttributeDecl(*[x.clone([compose_atoms(vpref,x.args[0]),x.args[1]]) for x in decl.args]) if vpref is not None else decl
                 idecl = substitute_constants_ast(idecl,vvsubst)
             else:
@@ -139,7 +139,7 @@ def inst_mod(ivy,module,pref,subst,vsubst):
         elif vsubst:
             map1 = distinct_variable_renaming(used_variables_ast(pref),used_variables_ast(decl))
             vpref = substitute_ast(pref,map1)
-            vvsubst = dict((x,map1[y.rep]) for x,y in vsubst.iteritems())
+            vvsubst = dict((x,map1[y.rep]) for x,y in vsubst.items())
             idecl = subst_prefix_atoms_ast(decl,subst,vpref,module.defined,static=module.static)
             idecl = substitute_constants_ast2(idecl,vvsubst)
         else:
@@ -147,7 +147,7 @@ def inst_mod(ivy,module,pref,subst,vsubst):
         if isinstance(idecl,ActionDecl):
             for foo in idecl.args:
                 if not hasattr(foo.args[1],'lineno'):
-                    print 'no lineno: {}'.format(foo)
+                    print('no lineno: {}'.format(foo))
         idecl.attributes = decl.attributes
         ivy.declare(idecl)
     ivy.attributes = save
@@ -169,7 +169,7 @@ def do_insts(ivy,insts):
             subst = dict((x.rep,y.rep) for x,y in zip(fparams,aparams) if not isinstance(y,Variable))
             vsubst = dict((x.rep,y) for x,y in zip(fparams,aparams) if isinstance(y,Variable))
             pvars = set(x.rep for x in pref.args) if pref != None else set()
-            for v in vsubst.values():
+            for v in list(vsubst.values()):
                 if v.rep not in pvars:
                     raise iu.IvyError(instantiation,"variable {} is unbound".format(v))
             module = defn.args[1]
@@ -1561,7 +1561,7 @@ else:
     p[0].declare(decl)
     for foo in decl.args:
         if not hasattr(foo.args[1],'lineno'):
-            print 'no lineno!!!: {}'.format(foo)
+            print('no lineno!!!: {}'.format(foo))
     if p[2]:
         if p[2] == ExportDecl:
             d = ExportDecl(ExportDef(Atom(p[4]),Atom('')))
@@ -2651,7 +2651,7 @@ def p_state_expr_entry(p):
     'state_expr : ENTRY'
     p[0] = RME(And(),[],And())
 
-from ivy_logic_parser import *
+from .ivy_logic_parser import *
 
 def p_error(token):
     if token is not None:
@@ -2693,7 +2693,7 @@ def expand_autoinstances(ivy):
                     for inst in autos[key]:
                         pref,parms = iu.extract_parameters_name(inst.args[0].rep)
                         lhs = Atom(tname,[]) 
-                        subst = dict(zip(parms,refparms))
+                        subst = dict(list(zip(parms,refparms)))
                         rhs = inst.args[1].clone([Atom(subst.get(a.rep,a.rep),[]) for a in inst.args[1].args])
                         newinst = Instantiation(lhs,rhs)
                         do_insts(ivy,[newinst])
@@ -2728,10 +2728,10 @@ if __name__ == '__main__':
        s = open('test.ivy','rU').read()
        try:
            result = parse(s)
-           print result
-           print result.defined
+           print(result)
+           print(result.defined)
        except iu.ErrorList as e:
-           print repr(e)
+           print(repr(e))
 #       print "enum: %s" % result.enumerate(dict(),lambda x:True)
 
 def clauses_to_concept(name,clauses):

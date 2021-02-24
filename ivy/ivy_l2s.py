@@ -46,18 +46,18 @@ self.sig
 from collections import defaultdict
 from itertools import chain
 
-from ivy_printer import print_module
-from ivy_actions import (AssignAction, Sequence, ChoiceAction,
+from .ivy_printer import print_module
+from .ivy_actions import (AssignAction, Sequence, ChoiceAction,
                          AssumeAction, AssertAction, HavocAction,
                          concat_actions, Action, CallAction)
-import ivy_actions as iact
-import logic as lg
-import ivy_logic as ilg
-import ivy_logic_utils as ilu
-import ivy_utils as iu
-import ivy_temporal as itm
-import ivy_proof as ipr
-import ivy_module as im
+from . import ivy_actions as iact
+from . import logic as lg
+from . import ivy_logic as ilg
+from . import ivy_logic_utils as ilu
+from . import ivy_utils as iu
+from . import ivy_temporal as itm
+from . import ivy_proof as ipr
+from . import ivy_module as im
 
 debug = iu.BooleanParameter("l2s_debug",False)
 
@@ -132,7 +132,7 @@ def l2s_tactic(prover,goals,proof):
                 return lg.And(l2s_saved,apply_happened(expr.body))
         return expr.clone([desugar(a) for a in expr.args])
     
-    invars = map(desugar,invars)
+    invars = list(map(desugar,invars))
                           
     # Add the invariant phi to the list. TODO: maybe, if it is a G prop
     # invars.append(ipr.clone_goal(goal,[],invar))
@@ -170,24 +170,24 @@ def l2s_tactic(prover,goals,proof):
 
     not_lf = replace_temporals_by_l2s_g(lg.Not(fmla))
     if debug.get():
-        print "=" * 80 +"\nafter replace_temporals_by_named_binder_g_ast"+ "\n"*3
-        print "=" * 80 + "\nl2s_gs:"
+        print("=" * 80 +"\nafter replace_temporals_by_named_binder_g_ast"+ "\n"*3)
+        print("=" * 80 + "\nl2s_gs:")
         for vs, t, env in sorted(l2s_gs):
-            print vs, t, env
-        print "=" * 80 + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+            print(vs, t, env)
+        print("=" * 80 + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # now we normalize all named binders
     mod_pass(ilu.normalize_named_binders)
     if debug.get():
-        print "=" * 80 +"\nafter normalize_named_binders"+ "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 +"\nafter normalize_named_binders"+ "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # construct the monitor related building blocks
 
-    uninterpreted_sorts = [s for s in ilg.sig.sorts.values() if type(s) is lg.UninterpretedSort and s.name not in mod.finite_sorts]
+    uninterpreted_sorts = [s for s in list(ilg.sig.sorts.values()) if type(s) is lg.UninterpretedSort and s.name not in mod.finite_sorts]
     reset_a = [
         AssignAction(l2s_a(s)(v), l2s_d(s)(v)).set_lineno(lineno)
         for s in uninterpreted_sorts
@@ -196,7 +196,7 @@ def l2s_tactic(prover,goals,proof):
     add_consts_to_d = [
         AssignAction(l2s_d(s)(c), lg.true).set_lineno(lineno)
         for s in uninterpreted_sorts
-        for c in ilg.sig.symbols.values() if c.sort == s
+        for c in list(ilg.sig.symbols.values()) if c.sort == s
     ]
     # TODO: maybe add all ground terms, not just consts (if stratified)
     # TODO: add conjectures that constants are in d and a
@@ -206,19 +206,19 @@ def l2s_tactic(prover,goals,proof):
     for b in ilu.named_binders_asts(model.invars):
 #        print 'binder: {} {} {}'.format(b.name,b.environ,b.body)
         named_binders_conjs[b.name].append((b.variables, b.body))
-    named_binders_conjs = defaultdict(list,((k,list(set(v))) for k,v in named_binders_conjs.iteritems()))
+    named_binders_conjs = defaultdict(list,((k,list(set(v))) for k,v in named_binders_conjs.items()))
     to_wait = [] # list of (variables, term) corresponding to l2s_w in conjectures
     to_wait += named_binders_conjs['l2s_w']
     to_save = [] # list of (variables, term) corresponding to l2s_s in conjectures
     to_save += named_binders_conjs['l2s_s']
 
     if debug.get():
-        print "=" * 40 + "\nto_wait:\n"
+        print("=" * 40 + "\nto_wait:\n")
         for vs, t in to_wait:
-            print vs, t
-            print list(ilu.variables_ast(t)) == list(vs)
-            print
-        print "=" * 40
+            print(vs, t)
+            print(list(ilu.variables_ast(t)) == list(vs))
+            print()
+        print("=" * 40)
 
     save_state = [
         AssignAction(l2s_s(vs,t)(*vs), t).set_lineno(lineno)
@@ -327,10 +327,10 @@ def l2s_tactic(prover,goals,proof):
     to_g += list(l2s_gs)
     to_g = list(set(to_g))
     if debug.get():
-        print '='*40 + "\nto_g:\n"
+        print('='*40 + "\nto_g:\n")
         for vs, t, env in sorted(to_g):
-            print vs, t, '\n'
-        print '='*40
+            print(vs, t, '\n')
+        print('='*40)
 
     assume_g_axioms = [
         AssumeAction(forall(vs, lg.Implies(l2s_g(vs, t, env)(*vs), t))).set_lineno(lineno)
@@ -342,7 +342,7 @@ def l2s_tactic(prover,goals,proof):
 
 
     if debug.get():
-        print "public_actions:", model.calls
+        print("public_actions:", model.calls)
 
     # Tableau construction
     #
@@ -542,9 +542,9 @@ def l2s_tactic(prover,goals,proof):
     model.init =  iact.postfix_action(model.init,l2s_init)
 
     if debug.get():
-        print "=" * 80 + "\nafter patching actions" + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nafter patching actions" + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # now replace all named binders by fresh relations
 
@@ -556,7 +556,7 @@ def l2s_tactic(prover,goals,proof):
             [b.action for b in model.bindings],
     )):
         named_binders[b.name].append(b)
-    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.iteritems()))
+    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.items()))
     # make sure old_l2s_g is consistent with l2s_g
 #    assert len(named_binders['l2s_g']) == len(named_binders['_old_l2s_g'])
     named_binders['_old_l2s_g'] = [
@@ -565,20 +565,20 @@ def l2s_tactic(prover,goals,proof):
     ]
     subs = dict(
         (b, lg.Const('{}_{}'.format(k, i), b.sort))
-        for k, v in named_binders.iteritems()
+        for k, v in named_binders.items()
         for i, b in enumerate(v)
     )
     if debug.get():
-        print "=" * 80 + "\nsubs:" + "\n"*3
-        for k, v in subs.items():
-            print k, ' : ', v, '\n'
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nsubs:" + "\n"*3)
+        for k, v in list(subs.items()):
+            print(k, ' : ', v, '\n')
+        print("=" * 80 + "\n"*3)
     mod_pass(lambda ast: ilu.replace_named_binders_ast(ast, subs))
 
     if debug.get():
-        print "=" * 80 + "\nafter replace_named_binders" + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nafter replace_named_binders" + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # if len(gprops) > 0:
     #     assumes = [gprop_to_assume(x) for x in gprops]
@@ -654,26 +654,26 @@ def l2s(mod, lf):
     mod_pass(replace_temporals_by_l2s_g)
     not_lf = replace_temporals_by_l2s_g(lg.Not(lf.formula))
     if debug.get():
-        print "=" * 80 +"\nafter replace_temporals_by_named_binder_g_ast"+ "\n"*3
-        print "=" * 80 + "\nl2s_gs:"
+        print("=" * 80 +"\nafter replace_temporals_by_named_binder_g_ast"+ "\n"*3)
+        print("=" * 80 + "\nl2s_gs:")
         for vs, t in sorted(l2s_gs):
-            print vs, t
-        print "=" * 80 + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+            print(vs, t)
+        print("=" * 80 + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # now we normalize all named binders
     mod_pass(ilu.normalize_named_binders)
     if debug.get():
-        print "=" * 80 +"\nafter normalize_named_binders"+ "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 +"\nafter normalize_named_binders"+ "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # TODO: what about normalizing lf?
 
     # construct the monitor related building blocks
 
-    uninterpreted_sorts = [s for s in mod.sig.sorts.values() if type(s) is lg.UninterpretedSort and s.name not in mod.finite_sorts]
+    uninterpreted_sorts = [s for s in list(mod.sig.sorts.values()) if type(s) is lg.UninterpretedSort and s.name not in mod.finite_sorts]
     reset_a = [
         AssignAction(l2s_a(s)(v), l2s_d(s)(v))
         for s in uninterpreted_sorts
@@ -682,7 +682,7 @@ def l2s(mod, lf):
     add_consts_to_d = [
         AssignAction(l2s_d(s)(c), lg.true)
         for s in uninterpreted_sorts
-        for c in mod.sig.symbols.values() if c.sort == s
+        for c in list(mod.sig.symbols.values()) if c.sort == s
     ]
     # TODO: maybe add all ground terms, not just consts (if stratified)
     # TODO: add conjectures that constants are in d and a
@@ -691,19 +691,19 @@ def l2s(mod, lf):
     named_binders_conjs = defaultdict(list) # dict mapping names to lists of (vars, body)
     for b in ilu.named_binders_asts(mod.labeled_conjs):
         named_binders_conjs[b.name].append((b.variables, b.body))
-    named_binders_conjs = defaultdict(list,((k,list(set(v))) for k,v in named_binders_conjs.iteritems()))
+    named_binders_conjs = defaultdict(list,((k,list(set(v))) for k,v in named_binders_conjs.items()))
     to_wait = [] # list of (variables, term) corresponding to l2s_w in conjectures
     to_wait += named_binders_conjs['l2s_w']
     to_save = [] # list of (variables, term) corresponding to l2s_s in conjectures
     to_save += named_binders_conjs['l2s_s']
 
     if debug.get():
-        print "=" * 40 + "\nto_wait:\n"
+        print("=" * 40 + "\nto_wait:\n")
         for vs, t in to_wait:
-            print vs, t
-            print list(ilu.variables_ast(t)) == list(vs)
-            print
-        print "=" * 40
+            print(vs, t)
+            print(list(ilu.variables_ast(t)) == list(vs))
+            print()
+        print("=" * 40)
 
     save_state = [
         AssignAction(l2s_s(vs,t)(*vs), t)
@@ -730,11 +730,11 @@ def l2s(mod, lf):
         for vs, t in to_wait
     ]
     if debug.get():
-        print "=" * 40 + "\nupdate_w:\n"
+        print("=" * 40 + "\nupdate_w:\n")
         for x in update_w:
-            print x
-            print
-        print "=" * 40
+            print(x)
+            print()
+        print("=" * 40)
 
     fair_cycle = [l2s_saved]
     fair_cycle += done_waiting
@@ -825,10 +825,10 @@ def l2s(mod, lf):
     to_g += list(l2s_gs)
     to_g = list(set(to_g))
     if debug.get():
-        print '='*40 + "\nto_g:\n"
+        print('='*40 + "\nto_g:\n")
         for vs, t in sorted(to_g):
-            print vs, t, '\n'
-        print '='*40
+            print(vs, t, '\n')
+        print('='*40)
 
     assume_g_axioms = [
         AssumeAction(forall(vs, lg.Implies(l2s_g(vs, t)(*vs), t)))
@@ -844,7 +844,7 @@ def l2s(mod, lf):
 
 
     if debug.get():
-        print "public_actions:", mod.public_actions
+        print("public_actions:", mod.public_actions)
     # TODO: this includes the succ action (for the ticket example of
     # test/test_liveness.ivy). seems to be a bug, and this causes
     # wrong behavior for the monitor, since a call to succ from within
@@ -884,20 +884,20 @@ def l2s(mod, lf):
     mod.initializers.append(('l2s_init', Sequence(*l2s_init).set_lineno(lineno)))
 
     if debug.get():
-        print "=" * 80 + "\nafter patching actions" + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nafter patching actions" + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
 
     # now replace all named binders by fresh relations
 
     named_binders = defaultdict(list) # dict mapping names to lists of (vars, body)
     for b in ilu.named_binders_asts(chain(
             mod.labeled_conjs,
-            mod.actions.values(),
+            list(mod.actions.values()),
             (y for x,y in mod.initializers),
     )):
         named_binders[b.name].append(b)
-    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.iteritems()))
+    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.items()))
     # make sure old_l2s_g is consistent with l2s_g
     assert len(named_binders['l2s_g']) == len(named_binders['old_l2s_g'])
     assert named_binders['old_l2s_g'] == [
@@ -906,17 +906,17 @@ def l2s(mod, lf):
     ]
     subs = dict(
         (b, lg.Const('{}_{}'.format(k, i), b.sort))
-        for k, v in named_binders.iteritems()
+        for k, v in named_binders.items()
         for i, b in enumerate(v)
     )
     if debug.get():
-        print "=" * 80 + "\nsubs:" + "\n"*3
-        for k, v in subs.items():
-            print k, ' : ', v, '\n'
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nsubs:" + "\n"*3)
+        for k, v in list(subs.items()):
+            print(k, ' : ', v, '\n')
+        print("=" * 80 + "\n"*3)
     mod_pass(lambda ast: ilu.replace_named_binders_ast(ast, subs))
 
     if debug.get():
-        print "=" * 80 + "\nafter replace_named_binders" + "\n"*3
-        print model
-        print "=" * 80 + "\n"*3
+        print("=" * 80 + "\nafter replace_named_binders" + "\n"*3)
+        print(model)
+        print("=" * 80 + "\n"*3)
