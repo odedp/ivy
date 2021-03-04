@@ -1457,7 +1457,7 @@ def get_file_version(filename):
     except:
         raise IvyError(None,"not found: %s" % filename)
     header = f.readline()
-    header = string.strip(header)
+    header = header.strip()
     if header.startswith('#lang ivy'):
         version = header[len('#lang ivy'):]
         if version.strip() != '':
@@ -2127,7 +2127,7 @@ def read_module(f,nested=False):
     from . import ivy_parser
     header = f.readline()
     s = '\n' + f.read() # newline at beginning to preserve line numbers
-    header = string.strip(header)
+    header = header.strip()
     if header.startswith('#lang ivy'):
         version = header[len('#lang ivy'):]
         if version.strip() != '':
