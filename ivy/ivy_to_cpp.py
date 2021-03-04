@@ -1212,8 +1212,8 @@ def emit_constructor(header,impl,cons,classname,inline=False):
     emit_some_action(header,impl,name,action,classname,inline)
 
 
-def native_split(string):
-    split = string.split('\n',1)
+def native_split(s):
+    split = s.split('\n',1)
     if len(split) == 2:
         tag = split[0].strip()
         return ("member" if not tag else tag),split[1]

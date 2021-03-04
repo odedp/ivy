@@ -560,7 +560,7 @@ def get_string_version():
     return ivy_language_version
 
 def string_version_to_numeric_version(v):
-    return list(map(int,string.split(v,'.')))
+    return list(map(int,v.split('.')))
 
 def get_numeric_version():
     return string_version_to_numeric_version(ivy_language_version)
