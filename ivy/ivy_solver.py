@@ -665,6 +665,25 @@ def get_arg_range(m,x):
 
 import itertools
 
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
 class SortOrder(object):
     def __init__(self,vs,order,model):
         self.vs = vs
@@ -738,7 +757,7 @@ class HerbrandModel(object):
             fun = z3.Function
             self.model[order.to_z3()]
 #            print "sorting..."
-            elems = sorted(elems,SortOrder(z3_vs,order_atom,self.model))
+            elems = sorted(elems,key=cmp_to_key(SortOrder(z3_vs,order_atom,self.model)))
         except IndexError:
             pass
 #        print "elems: {}".format(map(str,elems))
