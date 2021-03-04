@@ -105,7 +105,7 @@ class App(Expr):
             res.lineno = self.lineno
         return res
 
-class True(Expr):
+class True_(Expr):
     def __repr__(self):
         return "true"
 
