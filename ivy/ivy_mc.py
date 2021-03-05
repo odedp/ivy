@@ -79,7 +79,7 @@ class Aiger(object):
         return res
 
     def notl(self,arg):
-        return 2*(arg/2) + (1 - arg%2)
+        return 2*(arg//2) + (1 - arg%2)
     
     def orl(self,*args):
         return self.notl(self.andl(*list(map(self.notl,args))))

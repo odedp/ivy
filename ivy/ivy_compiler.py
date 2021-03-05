@@ -1449,8 +1449,8 @@ class IvyARGSetup(IvyDeclInterp):
 def BalancedChoice(choices):
     if len(choices) == 1:
         return choices[0]
-    return ChoiceAction(BalancedChoice(choices[0:len(choices)/2]),
-                        BalancedChoice(choices[len(choices)/2:]))
+    return ChoiceAction(BalancedChoice(choices[0:len(choices)//2]),
+                        BalancedChoice(choices[len(choices)//2:]))
 
 def get_file_version(filename):
     try:

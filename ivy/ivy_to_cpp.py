@@ -67,7 +67,7 @@ def get_indent(line):
         if char == ' ':
             lindent += 1
         elif char == '\t':
-            lindent = (lindent + 8) / 8 * 8
+            lindent = (lindent + 8) // 8 * 8
         else:
             break
     return lindent

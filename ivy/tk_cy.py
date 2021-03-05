@@ -88,7 +88,7 @@ class TkCyCanvas(Canvas):
 
     def create_shape(self,shape,dimensions,**kwargs):
         x,y,w,h = dimensions
-        x0,y0,x1,y1 = x-w/2, y-h/2, x+w/2, y+h/2
+        x0,y0,x1,y1 = x-w//2, y-h//2, x+w//2, y+h//2
         method = {'ellipse':self.create_oval, 'oval':self.create_oval, 'octagon':self.create_octagon}[shape]
         if 'double' in kwargs:
             gap = kwargs['double']
