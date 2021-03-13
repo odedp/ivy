@@ -22,7 +22,7 @@ from . import ivy_cpp_types
 from . import ivy_fragment as ifc
 import sys
 import os
-
+import z3
 
 from collections import defaultdict
 from operator import mul
@@ -425,7 +425,7 @@ thunk_counter = 0
 
 def expr_to_z3(expr):
     fmla = '(assert ' + slv.formula_to_z3(expr).sexpr().replace('|!1','!1|').replace('\\|','').replace('\n',' "\n"') + ')'
-    return 'z3::expr(g.ctx,Z3_parse_smtlib2_string(ctx, "{}", sort_names.size(), &sort_names[0], &sorts[0], decl_names.size(), &decl_names[0], &decls[0]))'.format(fmla)
+    return 'z3::mk_and(ctx.parse_string("{}"))'.format(fmla)
 
 
 
@@ -4684,7 +4684,7 @@ inline z3::expr forall(const std::vector<z3::expr> &exprs, z3::expr const & b) {
     std::copy(exprs.begin(),exprs.end(),vars);
     Z3_ast r = Z3_mk_forall_const(b.ctx(), 0, exprs.size(), vars, 0, 0, b);
     b.check_error();
-    delete vars;
+    delete[]  vars;
     return z3::expr(b.ctx(), r);
 }
 
@@ -4908,6 +4908,7 @@ public:
         z3::expr pred = apply_expr == val_expr;
         //        std::cout << "pred: " << pred << std::endl;
         slvr.add(pred);
+        return 0;
     }
 
     int set(const char *decl_name, int value) {
@@ -5054,7 +5055,8 @@ public:
     }
 
     void add(const std::string &z3inp) {
-        z3::expr fmla(ctx,Z3_parse_smtlib2_string(ctx, z3inp.c_str(), sort_names.size(), &sort_names[0], &sorts[0], decl_names.size(), &decl_names[0], &decls[0]));
+        z3::expr_vector fmlas = ctx.parse_string(z3inp.c_str());
+        z3::expr fmla = z3::mk_and(fmlas);
         ctx.check_error();
 
         slvr.add(fmla);
@@ -5282,7 +5284,7 @@ def main_int(is_ivyc):
                     else:
                         libs = []    
                     cpp11 = any(x.endswith('.cppstd') and y.rep=='cpp11' for x,y in im.module.attributes.items())
-                    gpp11_spec = ' -std=c++11 ' if cpp11 else '' 
+                    gpp11_spec = ' -std=c++11 '
                     libspec = ''
                     for x,y in im.module.attributes.items():
                         p,c = iu.parent_child_name(x)
@@ -5303,6 +5305,9 @@ def main_int(is_ivyc):
                         _dir = os.path.dirname(os.path.abspath(__file__))
                         incspec = '/I {}'.format(os.path.join(_dir,'include'))
                         libpspec = '/LIBPATH:{}'.format(os.path.join(_dir,'lib'))
+                        z3__dir = os.path.dirname(os.path.abspath(z3.__file__))
+                        incspec += ' /I {}'.format(os.path.join(z3_dir,'include'))
+                        libpspec += ' /LIBPATH:{}'.format(os.path.join(z3_dir,'lib'))
                         if not os.path.exists('libz3.dll'):
                             print('Copying libz3.dll to current directory.')
                             print('If the binary {}.exe is moved to another directory, this file must also be moved.'.format(basename))
@@ -5327,18 +5332,22 @@ def main_int(is_ivyc):
                         if opt_outdir.get():
                             cmd = 'cd {} & '.format(opt_outdir.get()) + cmd
                     else:
+                        def rpath(path):
+                            return '' if platform.system() == 'Darwin' else '-Wl,-rpath={}'.format(path)
                         if target.get() in ['gen','test']:
                             if 'Z3DIR' in os.environ:
-                                paths = '-I $Z3DIR/include -L $Z3DIR/lib -Wl,-rpath=$Z3DIR/lib' 
+                                paths = '-I $Z3DIR/include -L $Z3DIR/lib {}'.format(rpath('$Z3DIR/lib'))
                             else:
-                                _dir = os.path.dirname(os.path.abspath(__file__))
-                                paths = '-I {} -L {} -Wl,-rpath={}'.format(os.path.join(_dir,'include'),os.path.join(_dir,'lib'),os.path.join(_dir,'lib'))
+                                _dir = os.path.dirname(os.path.abspath(z3.__file__))
+                                paths = '-I {} -L {} {}'.format(os.path.join(_dir,'include'),os.path.join(_dir,'lib'),rpath(os.path.join(_dir,'lib')))
+                                z3_dir = os.path.dirname(os.path.abspath(z3.__file__))
+                                paths += ' -I {} -L {} {}'.format(os.path.join(z3_dir,'include'),os.path.join(z3_dir,'lib'),rpath(os.path.join(_dir,'lib')))
                         else:
                             paths = ''
                         for lib in libs:
                             _dir = lib[1]
                             _libdir = lib[2] if len(lib) >= 3 else (_dir  + '/lib')
-                            paths += ' -I {}/include -L {} -Wl,-rpath={}'.format(_dir,_libdir,_libdir)
+                            paths += ' -I {}/include -L {} {}'.format(_dir,_libdir,rpath(_libdir))
                         if emit_main:
                             cmd = "g++ {} {} -g -o {} {}.cpp".format(gpp11_spec,paths,basename,basename)
                         else:
@@ -5962,7 +5971,7 @@ namespace hash_space {
 // I'm using Bob Jenkin's hash function.
 // http://burtleburtle.net/bob/hash/doobs.html
 unsigned string_hash(const char * str, unsigned length, unsigned init_value) {
-    register unsigned a, b, c, len;
+    unsigned a, b, c, len;
 
     /* Set up the internal state */
     len = length;
