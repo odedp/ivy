@@ -912,7 +912,7 @@ class Sig(object):
         sort = self.symbols[symbol.name].sort
         if isinstance(sort,UnionSort):
             return symbol.sort in sort.sorts
-        return True
+        return sort == symbol.sort
 
     def contains(self,sort_or_symbol):
         if isinstance(sort_or_symbol,Symbol):
