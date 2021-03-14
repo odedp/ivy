@@ -425,7 +425,7 @@ thunk_counter = 0
 
 def expr_to_z3(expr):
     fmla = '(assert ' + slv.formula_to_z3(expr).sexpr().replace('|!1','!1|').replace('\\|','').replace('\n',' "\n"') + ')'
-    return 'z3::mk_and(ctx.parse_string("{}"))'.format(fmla)
+    return 'z3::mk_and(ctx.parse_string("{}",sorts,decls))'.format(fmla)
 
 
 
@@ -4696,18 +4696,17 @@ public:
     z3::model model;
 
 protected:
-    gen(): slvr(ctx), model(ctx,(Z3_model)0) {}
-
     hash_map<std::string, z3::sort> enum_sorts;
     hash_map<Z3_sort, z3::func_decl_vector> enum_values;
     hash_map<std::string, z3::func_decl> decls_by_name;
     hash_map<Z3_symbol,int> enum_to_int;
     std::vector<Z3_symbol> sort_names;
-    std::vector<Z3_sort> sorts;
+    z3::sort_vector sorts;
     std::vector<Z3_symbol> decl_names;
-    std::vector<Z3_func_decl> decls;
+    z3::func_decl_vector decls;
     std::vector<z3::expr> alits;
 
+    gen(): slvr(ctx), model(ctx,(Z3_model)0), sorts(ctx), decls(ctx) {}
 
 public:
     virtual bool generate(classname& obj)=0;
@@ -5004,8 +5003,8 @@ public:
         sorts.push_back(sort);
         for(unsigned i = 0; i < num_values; i++){
             Z3_symbol sym = Z3_mk_string_symbol(ctx,value_names[i]);
-            decl_names.push_back(sym);
-            decls.push_back(cs[i]);
+//            decl_names.push_back(sym);
+//            decls.push_back(cs[i]);
             enum_to_int[sym] = i;
         }
     }
@@ -5055,7 +5054,7 @@ public:
     }
 
     void add(const std::string &z3inp) {
-        z3::expr_vector fmlas = ctx.parse_string(z3inp.c_str());
+        z3::expr_vector fmlas = ctx.parse_string(z3inp.c_str(),sorts,decls);
         z3::expr fmla = z3::mk_and(fmlas);
         ctx.check_error();
 
@@ -5338,7 +5337,7 @@ def main_int(is_ivyc):
                             if 'Z3DIR' in os.environ:
                                 paths = '-I $Z3DIR/include -L $Z3DIR/lib {}'.format(rpath('$Z3DIR/lib'))
                             else:
-                                _dir = os.path.dirname(os.path.abspath(z3.__file__))
+                                _dir = os.path.dirname(os.path.abspath(__file__))
                                 paths = '-I {} -L {} {}'.format(os.path.join(_dir,'include'),os.path.join(_dir,'lib'),rpath(os.path.join(_dir,'lib')))
                                 z3_dir = os.path.dirname(os.path.abspath(z3.__file__))
                                 paths += ' -I {} -L {} {}'.format(os.path.join(z3_dir,'include'),os.path.join(z3_dir,'lib'),rpath(os.path.join(_dir,'lib')))
