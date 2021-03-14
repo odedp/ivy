@@ -595,7 +595,7 @@ def get_unprovided_defns(g1,g2):
         if goal_is_defn(prem):
             sym = goal_defines(prem)
             if sym not in defns and not il.sig.contains(sym):
-                res.append(prem)
+                    res.append(prem)
     return res
 
 # Turn the propositional premises of a goal into a list of subgoals. The
