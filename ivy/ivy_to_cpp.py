@@ -1036,6 +1036,21 @@ def expand_field_references(pre_clauses):
     dfs = [df for df in dfs if df.args[0] != df.args[1]]
     return ilu.Clauses(list(map(recur,pre_clauses.fmlas)),dfs)
 
+def get_lib_dirs(with_z3=True):
+    import platform
+    def file_dir_path(x):
+        return os.path.dirname(os.path.abspath(x))
+    files = [__file__]
+    if sys.version_info[0] >= 3 and with_z3:
+        files = [z3.__file__] + files
+    dirs = [file_dir_path(x) for x in files]
+    if platform.system() == 'Darwin':
+        dirs.append('/usr/local/opt/openssl')  # work around Mac openssl bug
+    if with_z3 and 'Z3DIR' in os.environ:
+        dirs.append('$Z3DIR')
+    return dirs
+
+
 def emit_action_gen(header,impl,name,action,classname):
     global indent_level
     global global_classname
@@ -5331,22 +5346,14 @@ def main_int(is_ivyc):
                         if opt_outdir.get():
                             cmd = 'cd {} & '.format(opt_outdir.get()) + cmd
                     else:
-                        def rpath(path):
-                            return '' if platform.system() == 'Darwin' else '-Wl,-rpath={}'.format(path)
                         if target.get() in ['gen','test']:
-                            if 'Z3DIR' in os.environ:
-                                paths = '-I $Z3DIR/include -L $Z3DIR/lib {}'.format(rpath('$Z3DIR/lib'))
-                            else:
-                                z3_dir = os.path.dirname(os.path.abspath(z3.__file__))
-                                paths = '-I {} -L {} {}'.format(os.path.join(z3_dir,'include'),os.path.join(z3_dir,'lib'),rpath(os.path.join(z3_dir,'lib')))
-                                _dir = os.path.dirname(os.path.abspath(__file__))
-                                paths += ' -I {} -L {} {}'.format(os.path.join(_dir,'include'),os.path.join(_dir,'lib'),rpath(os.path.join(_dir,'lib')))
+                            paths = ' '.join('-I {} -L {} -Xlinker -rpath -Xlinker {}'.format(os.path.join(_dir,'include'),os.path.join(_dir,'lib'),os.path.join(_dir,'lib')) for _dir in get_lib_dirs())
                         else:
                             paths = ''
                         for lib in libs:
                             _dir = lib[1]
                             _libdir = lib[2] if len(lib) >= 3 else (_dir  + '/lib')
-                            paths += ' -I {}/include -L {} {}'.format(_dir,_libdir,rpath(_libdir))
+                            paths += ' -I {}/include -L {} -Xlinker -rpath -Xlinker {}'.format(_dir,_libdir,_libdir)
                         if emit_main:
                             cmd = "g++ -Wno-parentheses-equality {} {} -g -o {} {}.cpp".format(gpp11_spec,paths,basename,basename)
                         else:

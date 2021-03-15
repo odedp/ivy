@@ -1,10 +1,10 @@
 import os
 import platform
-import z3
+import ivy_to_cpp
 
 def main():
     if platform.system() == 'Darwin':
-        path = ':'.join(os.path.join(os.path.dirname(os.path.abspath(x)),'lib') for x in [z3.__file__,__file__])
+        path = ':'.join(os.path.join(x,'lib') for x in ivy_to_cpp.get_lib_dirs())
         pvar = 'DYLD_LIBRARY_PATH'
         if os.environ.get(pvar):
             path += ':' + os.environ[pvar]
