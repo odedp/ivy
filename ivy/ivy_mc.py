@@ -1616,7 +1616,7 @@ def check_isolate():
 
     # output aiger to temp file
 
-    with tempfile.NamedTemporaryFile(suffix='.aag',delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix='.aag',delete=False,mode='wt') as f:
         name = f.name
 #        print 'file name: {}'.format(name)
         f.write(str(aiger))
@@ -1648,7 +1648,7 @@ def check_isolate():
     print(80*'-')
     texts = []
     while True:
-        text = p.stdout.read(256)
+        text = p.stdout.read(256).decode('utf-8')
         sys.stdout.write(text)
         texts.append(text)
         if len(text) < 256:

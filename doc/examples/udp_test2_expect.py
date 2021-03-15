@@ -1,10 +1,7 @@
 import pexpect
-import sys
 
-def run(name,opts,res):
-    child = [pexpect.spawn('./{} {}'.format(name,idx)) for idx in range(2)]
-    for idx in range(2):
-        child[idx].logfile = sys.stdout
+def run(name,opts,res,spawn):
+    child = [spawn('./{} {}'.format(name,idx)) for idx in range(2)]
     try:
         child[0].expect('>')
         child[0].sendline('foo.send(1,2)')

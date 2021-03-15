@@ -556,7 +556,7 @@ def l2s_tactic(prover,goals,proof):
             [b.action for b in model.bindings],
     )):
         named_binders[b.name].append(b)
-    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.items()))
+    named_binders = defaultdict(list, ((k,list(iu.unique(v))) for k,v in named_binders.items()))
     # make sure old_l2s_g is consistent with l2s_g
 #    assert len(named_binders['l2s_g']) == len(named_binders['_old_l2s_g'])
     named_binders['_old_l2s_g'] = [
@@ -897,7 +897,7 @@ def l2s(mod, lf):
             (y for x,y in mod.initializers),
     )):
         named_binders[b.name].append(b)
-    named_binders = defaultdict(list, ((k,list(sorted(set(v)))) for k,v in named_binders.items()))
+    named_binders = defaultdict(list, ((k,list(iu.unique(v))) for k,v in named_binders.items()))
     # make sure old_l2s_g is consistent with l2s_g
     assert len(named_binders['l2s_g']) == len(named_binders['old_l2s_g'])
     assert named_binders['old_l2s_g'] == [

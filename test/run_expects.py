@@ -174,7 +174,7 @@ class Test(object):
         for pc in self.preprocess_commands():
             print('executing: {}'.format(pc))
             child = spawn(pc)
-            child.logfile = sys.stdout
+            #child.logfile = sys.stdout
             child.expect(pexpect.EOF)
             child.close()
             if child.exitstatus != 0:
@@ -222,7 +222,7 @@ class IvyRepl(Test):
         print('wd:{}'.format(os.getcwd()))
         modname = self.res if self.res != None else (self.name+'_expect')
         mod = imp.load_source(modname,modname+'.py')
-        return mod.run('build/'+self.name,self.opts,self.res)
+        return mod.run('build/'+self.name,self.opts,self.res,pexpect.spawn)
     
 class IvyToCpp(Test):
     def command(self):

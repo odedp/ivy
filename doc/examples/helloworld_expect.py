@@ -1,9 +1,8 @@
 import pexpect
-import sys
 
-def run(name,opts,res):
-    child = pexpect.spawn('./{}'.format(name))
-    child.logfile = sys.stdout
+
+def run(name,opts,res,spawn):
+    child = spawn('./{}'.format(name))
     try:
         child.expect('>')
         child.sendline('hello')

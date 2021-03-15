@@ -1,9 +1,7 @@
 import pexpect
-import sys
 
-def run(name,opts,res):
-    child = pexpect.spawn('./{} 0'.format(name))
-    child.logfile = sys.stdout
+def run(name,opts,res,spawn):
+    child = spawn('./{} 0'.format(name))
     try:
         child.expect('>')
         child.sendline('foo.get_bit')
@@ -13,8 +11,7 @@ def run(name,opts,res):
         return False
     finally:
         child.close()
-    child = pexpect.spawn('./{} 1'.format(name))
-    child.logfile = sys.stdout
+    child = spawn('./{} 1'.format(name))
     try:
         child.expect('>')
         child.sendline('foo.get_bit')
