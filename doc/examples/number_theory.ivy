@@ -620,6 +620,8 @@ proof {
     unfold with dvds_alt
     tactic skolemize
     instantiate with Z = _A * _Z - _B * M
+#    property [lem1] _A * N * M - _B * M * P = M
+#    property [lem2] _A * _Z * P - _B * M * P = M
 }
 
 # Also, using Bezout's lemma, we can show the following.

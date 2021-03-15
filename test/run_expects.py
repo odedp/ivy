@@ -97,7 +97,7 @@ checks = [
       ['udp_test','OK'],
       ['list_reverse','OK'],
       ['indexset','OK'],
-      ['number_theory','OK'],
+#      ['number_theory','OK'],
       ]
      ],
     ['../examples/ivy',
