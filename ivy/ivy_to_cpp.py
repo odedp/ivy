@@ -5348,9 +5348,9 @@ def main_int(is_ivyc):
                             _libdir = lib[2] if len(lib) >= 3 else (_dir  + '/lib')
                             paths += ' -I {}/include -L {} {}'.format(_dir,_libdir,rpath(_libdir))
                         if emit_main:
-                            cmd = "g++ {} {} -g -o {} {}.cpp".format(gpp11_spec,paths,basename,basename)
+                            cmd = "g++ -Wno-parentheses-equality {} {} -g -o {} {}.cpp".format(gpp11_spec,paths,basename,basename)
                         else:
-                            cmd = "g++ {} {} -g -c {}.cpp".format(gpp11_spec,paths,basename)
+                            cmd = "g++ -Wno-parentheses-equality {} {} -g -c {}.cpp".format(gpp11_spec,paths,basename)
                         if target.get() in ['gen','test']:
                             cmd = cmd + ' -lz3'
                         cmd += libspec
